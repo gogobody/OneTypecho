@@ -16,23 +16,7 @@ Hi，欢迎使用“酱茄小程序开源版 二开 typecho – 即刻学术小�
 4. 分类描述格式：<分类图片>描述
 
 
-————————————【原作联系/版权】————————————
-
-微信客服：jianbing2011 （如要加入微信群请说明）
-
-技术支持：www.jiangqie.com
-
-下载安装：https://www.jiangqie.com/ky
-
-开源协议：The MIT License (MIT)
-
-Copyright © 2020 酱茄 jiangqie.com
-
-在此对提供开源及创意表示致谢，开源声明关注酱茄官网。
-
 ## 演示
-
-![微信二维码](https://cdn.jsdelivr.net/gh/gogobody/OneTypecho/rd-images/qrcode.jpg)
 
 
 ![1](https://cdn.jsdelivr.net/gh/gogobody/OneTypecho/rd-images/q1.png)
