@@ -2,12 +2,12 @@
 
 Hi，欢迎使用“酱茄小程序开源版 二开 typecho – 即刻学术小程序”。
 
->酱茄小程序开源版基于WordPress开源程序和WordPress REST API开发，实现WordPress网站数据与小程序数据同步共享，通过简单的配置就能搭建自己的小程序。
+>版权声明：即刻学术小程序前端基于 酱茄小程序-人人咖啡师 二次开发，由微信版改为 typecho 超级 UniApp 版本！插件由即刻本人完全独立开发！
+>恳请各位使用的，二开的，留个本人的链接！更希望某些改点代码就说是自己的能收敛一点！！！
+>开源不易，且用且珍惜！如果您有好的想法欢迎 pr。更欢迎 star！！！
 
-gogobody 基于 人人咖啡师 二次开发 修改为 typehco 专用
 
-
-安装文档/常见问题：[https://geekscholar.net/archives/76/](https://geekscholar.net/archives/76/)
+安装文档/常见问题：[https://www.ijkxs.com/3016.html/](https://www.ijkxs.com/3016.html/)
 
 注意事项：
 1. 目前只有微信小程序

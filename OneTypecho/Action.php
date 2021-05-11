@@ -224,15 +224,13 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
 
             if (self::option_value('JSwitch_excerpt') == 'yes') {
                 if ($post->excerpt) {
-                    $item["excerpt"] = html_entity_decode(self::tp_trim_words($post['content'], 50, '...'));
+                    $item["excerpt"] = html_entity_decode(self::tp_trim_words($post['text'], 50, '...'));
                 } else {
-                    $content = $post['content'];
+                    $content = $post['text'];
                     $item["excerpt"] = html_entity_decode(self::tp_trim_words($content, 50, '...'));
                 }
             }
-
-            $item['thumbnail'] = self::GetRandomThumbnail($post->content);
-
+            $item['thumbnail'] = self::GetRandomThumbnail($post['text']);
             $data[] = $item;
         }
         return $data;
@@ -398,6 +396,7 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
 
         return $posts;
     }
+
     /* 随机图片 */
     public static function GetRandomThumbnail($content, $thumb = "")
     {
@@ -405,12 +404,15 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
             return $thumb;
         }
         $options = Typecho_Widget::widget('Widget_Options')->plugin('OneTypecho');
+        $default_thumb = $options->JDefault_thumbnail;
         $random = 'https://cdn.jsdelivr.net/npm/typecho_joe_theme@4.3.5/assets/img/random/' . rand(1, 25) . '.webp';
         if ($options->defaultBackImg) {
             $moszu = explode("\r\n", $options->defaultBackImg);
             $random = $moszu[array_rand($moszu, 1)] . "?jrandom=" . mt_rand(0, 1000000);
         }
-        $pattern = '/\<img.*?src\=\"(.*?)\"[^>]*>/i';
+//        $pattern = '/\<img.*?src\=\"(.*?)\"[^>]*>/i';
+        // 采用更严格的图片匹配模式
+        $pattern="/<[img|IMG].*?src=[\'|\"](.*?(?:[\.gif|\.jpeg|\.png|\.jpg]))[\'|\"].*?[\/]?>/";
         $patternMD = '/\!\[.*?\]\((http(s)?:\/\/.*?(jpg|jpeg|gif|png|webp))/i';
         $patternMDfoot = '/\[.*?\]:\s*(http(s)?:\/\/.*?(jpg|jpeg|gif|png|webp))/i';
         $t = preg_match_all($pattern, $content, $thumbUrl);
@@ -421,6 +423,8 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
             $img = $thumbUrl[1][0];
         } elseif (preg_match_all($patternMDfoot, $content, $thumbUrl)) {
             $img = $thumbUrl[1][0];
+        } elseif (!empty($default_thumb)){
+            $img = $default_thumb;
         }
         return $img;
     }
@@ -489,17 +493,19 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
 
         //图标导航
         $icon_nav_org = self::option_value('JHome_icon_nav');
-        $nav_list = explode("\r\n",$icon_nav_org);
+        $nav_list = explode("\r\n",trim($icon_nav_org));
 
         $icon_nav = [];
-        if (is_array($nav_list)) {
+        if (is_array($nav_list) and !empty($nav_list)) {
             foreach ($nav_list as $item_list) {
-                $items = explode('||',$item_list);
-                $item = [];
-                $item['icon'] = $items[0];
-                $item['title'] = $items[1];
-                $item['link'] = $items[2];
-                $icon_nav[] = $item;
+                $items = explode('||',trim($item_list));
+                if (isset($items) and !empty($items[0])){
+                    $item = [];
+                    $item['icon'] = $items[0];
+                    $item['title'] = $items[1];
+                    $item['link'] = $items[2];
+                    $icon_nav[] = $item;
+                }
             }
         }
         $data['icon_nav'] = $icon_nav;
@@ -664,6 +670,7 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
             'posts_per_page' => self::POSTS_PER_PAGE,
             'offset' => $offset,
             'orderby' => 'created',
+            'order' => 'DESC'
         ];
 
         $hide_cat = self::option_value('JHide_cat');
@@ -794,7 +801,7 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
         if ($postObj->excerpt) {
             $post['excerpt'] = html_entity_decode(self::tp_trim_words($postObj->post_excerpt, 100, '...'));
         } else {
-            $post['excerpt'] = html_entity_decode(self::tp_trim_words($post['content'], 100, '...'));
+            $post['excerpt'] = html_entity_decode(self::tp_trim_words($post['text'], 100, '...'));
         }
 
         //查询tag
@@ -987,9 +994,9 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
 
         $per_page_count = self::POSTS_PER_PAGE;
         if ($track == 'comments'){
-            $post_ids = $this->db->fetchAll($this->db->query("SELECT distinct $field FROM `$table_name` WHERE authorId=$user_id ORDER BY $orderby DESC LIMIT $offset, $per_page_count"));
+            $post_ids = $this->db->fetchAll($this->db->query("SELECT distinct $field,$orderby FROM `$table_name` WHERE authorId=$user_id ORDER BY $orderby DESC LIMIT $offset, $per_page_count"));
         }else{
-            $post_ids = $this->db->fetchAll($this->db->query("SELECT distinct $field FROM `$table_name` WHERE user_id=$user_id ORDER BY $orderby DESC LIMIT $offset, $per_page_count"));
+            $post_ids = $this->db->fetchAll($this->db->query("SELECT distinct $field,$orderby FROM `$table_name` WHERE user_id=$user_id ORDER BY $orderby DESC LIMIT $offset, $per_page_count"));
         }
         if (empty($post_ids)) {
             return $this->make_success([]);
@@ -1014,7 +1021,8 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
     public function get_wxacode()
     {
         $post_id = $this->request->get('post_id', 0);
-        if (!$post_id) {
+        $plantform = $this->request->get('plantform', '');
+        if (!$post_id or !$plantform) {
             return $this->make_error('缺少参数');
         }
 
@@ -1024,22 +1032,35 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
         $uploads = self::tp_uploads_dir();
         $qrcode_path = $uploads['path'] . '/wxacode/';
         if (!is_dir($qrcode_path)) {
-            mkdir($qrcode_path, 0755);
+            mkdir($qrcode_path, 0755,true);
         }
 
+        // 小程序码数量有限，所以不再单独为每篇文章生成
+        if ($plantform == 'mp-weixin'){
+            $session = $this->getWXSession();
+            $post_type = 'mp-weixin';
+            $baseUrl = 'https://api.weixin.qq.com/wxa/getwxacodeunlimit?access_token=';
+        }elseif ($plantform == 'mp-qq'){
+            $session = $this->getQQSession();
+            $post_type = 'mp-qq';
+            $baseUrl = 'https://api.q.qq.com/api/json/qqa/CreateMiniCode?access_token=';
+
+        }else{
+            return $this->make_error("不支持的平台");
+        }
         $qrcode = $qrcode_path . 'wxacode-' . $post_type . '-' . $post_id . '.png';
         $qrcode_link = $uploads['url'] . '/wxacode/' . 'wxacode-' . $post_type . '-' . $post_id . '.png';
         if (is_file($qrcode)) {
             return $this->make_success($qrcode_link);
         }
 
-        $wx_session = $this->getWXSession();
-        $access_token = $wx_session['access_token'];
+
+        $access_token = $session['access_token'];
         if (empty($access_token)) {
             return $this->make_error('获取二维码失败');
         }
 
-        $api = 'https://api.weixin.qq.com/wxa/getwxacodeunlimit?access_token=' . $access_token;
+        $api =  $baseUrl. $access_token;
 
         $color = array(
             "r" => "0",  //这个颜色码自己到Photoshop里设
@@ -1048,16 +1069,30 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
         );
 
         $page = 'pages/article/article';
-
-        $data = array(
-            'scene' => $post_id, //TODO 自定义信息，可以填写诸如识别用户身份的字段，注意用中文时的情况
-            'page' => $page, // 前端传过来的页面path,不能为空，最大长度 128 字节
-            'path' => $page,
-            'width' => 200, // 设置二维码尺寸,二维码的宽度
-            'auto_color' => false, // 自动配置线条颜色，如果颜色依然是黑色，则说明不建议配置主色调
-            'line_color' => $color, // auth_color 为 false 时生效，使用 rgb 设置颜色 例如 {"r":"xxx","g":"xxx","b":"xxx"},十进制表示
-            'is_hyaline' => true, // 是否需要透明底色， is_hyaline 为true时，生成透明底色的小程序码
-        );
+        if ($plantform == 'mp-weixin'){
+            $data = array(
+                'scene' => $post_id, //TODO 自定义信息，可以填写诸如识别用户身份的字段，注意用中文时的情况
+                'page' => $page, // 前端传过来的页面path,不能为空，最大长度 128 字节
+                'path' => $page,
+                'width' => 200, // 设置二维码尺寸,二维码的宽度
+                'auto_color' => false, // 自动配置线条颜色，如果颜色依然是黑色，则说明不建议配置主色调
+                'line_color' => $color, // auth_color 为 false 时生效，使用 rgb 设置颜色 例如 {"r":"xxx","g":"xxx","b":"xxx"},十进制表示
+                'is_hyaline' => true, // 是否需要透明底色， is_hyaline 为true时，生成透明底色的小程序码
+            );
+        }elseif ($plantform == 'mp-qq'){
+            $data = array(
+                'scene' => $post_id, //TODO 自定义信息，可以填写诸如识别用户身份的字段，注意用中文时的情况
+                'appid' => self::option_value('JQQAppid'),
+                'page' => $page, // 前端传过来的页面path,不能为空，最大长度 128 字节
+                'path' => $page,
+                'width' => 200, // 设置二维码尺寸,二维码的宽度
+                'auto_color' => false, // 自动配置线条颜色，如果颜色依然是黑色，则说明不建议配置主色调
+                'line_color' => $color, // auth_color 为 false 时生效，使用 rgb 设置颜色 例如 {"r":"xxx","g":"xxx","b":"xxx"},十进制表示
+                'is_hyaline' => true, // 是否需要透明底色， is_hyaline 为true时，生成透明底色的小程序码
+            );
+        }else{
+            return $this->make_error("不支持的平台");
+        }
 
         $content = $this->http_post_data($api, json_encode($data));
         if (!$content) {
@@ -1093,24 +1128,29 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
         $code = $this->request->get('code', '');
         $encrypted_data = $this->request->get('encrypted_data', '');
         $iv = $this->request->get('iv', '');
+        $plantform = $this->request->get('plantform','');
 
-        if (empty($code) || empty($encrypted_data) || empty($iv)) {
+        if (empty($code) || empty($encrypted_data) || empty($iv) || empty($plantform)) {
             return $this->make_error('缺少参数');
         }
+        if ($plantform == "mp-weixin"){
+            $baseurl = 'https://api.weixin.qq.com/sns/jscode2session?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code';
+            $app_id = self::option_value('JAppid');
+            $app_secret = self::option_value('JApp_secret');
+        }elseif($plantform == "mp-qq"){
+            $baseurl = 'https://api.q.qq.com/sns/jscode2session?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code';
+            $app_id = self::option_value('JQQAppid');
+            $app_secret = self::option_value('JQQApp_secret');
+        }else{
+            return $this->make_error('平台不支持');
+        }
 
-        $app_id = self::option_value('JAppid');
-        $app_secret = self::option_value('JApp_secret');
-        $params = [
-            'appid' => $app_id,
-            'secret' => $app_secret,
-            'js_code' => $code,
-            'grant_type' => 'authorization_code'
-        ];
-        $url = sprintf('https://api.weixin.qq.com/sns/jscode2session?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code', $app_id,$app_secret, $code);
+
+        $url = sprintf($baseurl, $app_id,$app_secret, $code);
         $info = file_get_contents($url);
         $json = json_decode($info);//对json数据解码
-        $wx_session = get_object_vars($json);
-//        $openid = $wx_session['openid'];
+        $session = get_object_vars($json);
+//        $openid = $session['openid'];
 
 //        $result = wp_remote_get(add_query_arg($params, 'https://api.weixin.qq.com/sns/jscode2session'));
 //        if (!is_array($result) || is_wp_error($result) || $result['response']['code'] != '200') {
@@ -1118,16 +1158,16 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
 //        }
 //
 //        $body = stripslashes($result['body']);
-//        $wx_session = json_decode($body, true);
+//        $session = json_decode($body, true);
 
-        $auth_code = $this->decryptData($app_id, $wx_session['session_key'], urldecode($encrypted_data), urldecode($iv), $data);
+        $auth_code = $this->decryptData($app_id, $session['session_key'], urldecode($encrypted_data), urldecode($iv), $data);
         if ($auth_code != 0) {
-            return $this->make_error('wx授权失败',$auth_code);
+            return $this->make_error('授权失败',$auth_code);
         }
 
         $user_data = json_decode($data, true);
 
-        $open_id = $wx_session['openid'];
+        $open_id = $session['openid'];
 
         // $open_id = uniqid();
         // $open_id = '5e4fc0f56e034';
@@ -1292,11 +1332,18 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
         $offset = $this->request->get('offset', 0);
 
         $token = $this->request->get('token', '');
-        if (empty($token)) {
-            return false;
+        $user = [];
+        if ($token != 'false'){
+            $user = $this->db->fetchRow($this->db->select('uid','ext_mail')->from('table.users')->where('one_token = ?',$token));
+            if (empty($user['uid'])){
+                return $this->make_success([
+                    "comments" => [],
+                    "user_mail" => ''
+                ]);
+            }
+        }else{
+            $user['uid'] = null;
         }
-        if ($token == 'false') return '';
-        $user = $this->db->fetchRow($this->db->select('uid','ext_mail')->from('table.users')->where('one_token = ?',$token));
 
         $comments = $this->get_comments($post_id, $user['uid'], 0, $offset);
 
@@ -1349,13 +1396,16 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
                 return $this->make_error("邮箱不合法");
             }
             $rows = $this->db->fetchRow($this->db->select('uid')->from('table.users')->where('ext_mail = ?',$c_mail));
-            if (isset($rows['uid']) and $rows['uid'] != $user_id){ // 已经存在相同邮箱用户
-                return $this->make_error("已经存在相同邮箱用户");
-            }else{
-                $this->tp_update_user($user_id,[
-                    'ext_mail' => $c_mail
-                ]);
-            }
+//            if (isset($rows['uid']) and $rows['uid'] != $user_id){ // 已经存在相同邮箱用户
+//                return $this->make_error("已经存在相同邮箱用户");
+//            }else{
+//                $this->tp_update_user($user_id,[
+//                    'ext_mail' => $c_mail
+//                ]);
+//            }
+            $this->tp_update_user($user_id,[
+                'ext_mail' => $c_mail
+            ]);
         }
 
         $comment_id = $this->db->query($this->db->insert('table.comments')->rows([
@@ -1541,6 +1591,7 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
         return $ErrorCode['OK'];
     }
     /**
+     * 获取access token
      * @return false|mixed
      * @throws Typecho_Plugin_Exception
      */
@@ -1549,6 +1600,20 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
         $app_id = self::option_value('JAppid');
         $app_secret = self::option_value('JApp_secret');
         $url = 'https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=' . $app_id . '&secret=' . $app_secret;
+        $info = file_get_contents($url);
+        $json = json_decode($info);
+        $arr = get_object_vars($json);
+        if (!$arr['access_token']){
+            return false;
+        }
+        return $arr; // access_token
+    }
+
+    private function getQQSession()
+    {
+        $app_id = self::option_value('JQQAppid');
+        $app_secret = self::option_value('JQQApp_secret');
+        $url = 'https://api.q.qq.com/api/getToken?grant_type=client_credential&appid=' . $app_id . '&secret=' . $app_secret;
         $info = file_get_contents($url);
         $json = json_decode($info);
         $arr = get_object_vars($json);

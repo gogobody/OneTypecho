@@ -1,0 +1,29 @@
+/*
+ * 即刻学术小程序开源版 v1.2.2
+ * Author: 即刻学术
+ * Help document: https://ijkxs.com/ky
+ * github: https://github.com/longwenjunjie/jiangqie_kafei
+ * gitee: https://gitee.com/longwenjunj/jiangqie_kafei
+ * License：MIT
+ * Copyright ️ 2020 ijkxs.com All rights reserved.
+ */
+
+.none_tip {
+    padding: 80rpx;
+    text-align: center;
+}
+
+.none_tip image {
+    height: 200rpx;
+    width: 200rpx;
+}
+
+.none_tip_text {
+    padding: 20rpx;
+}
+
+.none_tip_text text {
+    font-size: 28rpx;
+    color: #999;
+    font-weight: 200;
+}

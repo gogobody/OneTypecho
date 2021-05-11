@@ -31,7 +31,6 @@ Page({
         title: '热门标题，请在后台修改',
         description: '热门描述，请在后台修改',
     },
-
     sorts: ['views', 'likes', 'favorites', 'comments'],
 
     onLoad: function (options) {

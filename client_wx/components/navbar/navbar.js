@@ -10,13 +10,13 @@ Component({
         },
         background: {
             type: String,
-            observer: '_showChange'
+            observer: 'showChangeFunc'
         },
-        backgroundColorTop: {
-            type: String,
-            // value: 'rgba(224, 48, 31, 100)',
-            observer: '_showChangeBackgroundColorTop'
-        },
+        // backgroundColorTop: {
+        //     type: String,
+        //     // value: 'rgba(224, 48, 31, 100)',
+        //     observer: '_showChangeBackgroundColorTop'
+        // },
         color: {
             type: String,
             value: 'rgba(255, 255, 255, 1)'
@@ -52,7 +52,7 @@ Component({
         show: {
             type: Boolean,
             value: true,
-            observer: '_showChange'
+            observer: 'showChangeFunc'
         },
         delta: {
             type: Number,
@@ -77,6 +77,9 @@ Component({
     },
     methods: {
         setStyle(life) {
+            if(!getApp().globalSystemInfo){
+                this.getSystemInfo()
+            }
             const {
                 statusBarHeight,
                 navBarHeight,
@@ -133,16 +136,16 @@ Component({
                 })
             }
         },
-        _showChange() {
+        showChangeFunc() {
             this.setStyle()
         },
         // 返回事件
-        back() {
+        goback() {
             this.triggerEvent('back', {
                 delta: this.data.delta
             })
         },
-        home() {
+        gohome() {
             this.triggerEvent('home', {})
         },
         search() {

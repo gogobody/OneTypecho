@@ -11,21 +11,22 @@
                 <li data-current="j-setting-hot">热门设置</li>
                 <li data-current="j-setting-profile">我的设置</li>
             </ul>
+            <?php require_once('Backups.php'); ?>
         </div>
     </div>
-    <span id="j-version" style="display: none;">1.0.0</span>
+    <span id="j-version" style="display: none;">1.0.2</span>
     <div class="j-setting-notice"></div>
     <script src="<?php echo Helper::options()->rootUrl ?>/usr/plugins/OneTypecho/assets/js/joe.setting.min.js"></script>
 <?php
 if (!defined('__TYPECHO_ROOT_DIR__')) exit;
 /**
  * OneTypecho 即刻学术小程序专用插件
- * 
+ * 文本解析暂时只支持 Markdown
  * @package OneTypecho
  * @author gogobody
  * @version 1.0.0
  * @link https://geekscholar.net
- * /pages/viewhtml/viewhtml?page_id 路由采用 wxparse 解析， 暂停使用
+ *
  */
 
 class OneTypecho_Plugin implements Typecho_Plugin_Interface
@@ -171,7 +172,7 @@ class OneTypecho_Plugin implements Typecho_Plugin_Interface
             NULL,
             Null,
             'Appid',
-            '小程序 Appid'
+            '微信小程序 Appid'
         );
         $JAppid->setAttribute('class', 'j-setting-content j-setting-basic');
         $form->addInput($JAppid);
@@ -181,10 +182,30 @@ class OneTypecho_Plugin implements Typecho_Plugin_Interface
             NULL,
             Null,
             'AppSecret',
-            '小程序 AppSecret'
+            '微信小程序 AppSecret'
         );
         $JApp_secret->setAttribute('class', 'j-setting-content j-setting-basic');
         $form->addInput($JApp_secret);
+
+        $JQQAppid = new Typecho_Widget_Helper_Form_Element_Text(
+            'JQQAppid',
+            NULL,
+            Null,
+            'QQAppid',
+            'QQ小程序 Appid'
+        );
+        $JQQAppid->setAttribute('class', 'j-setting-content j-setting-basic');
+        $form->addInput($JQQAppid);
+
+        $JQQApp_secret = new Typecho_Widget_Helper_Form_Element_Text(
+            'JQQApp_secret',
+            NULL,
+            Null,
+            'JQQApp_secret',
+            'QQ小程序 App_secret'
+        );
+        $JQQApp_secret->setAttribute('class', 'j-setting-content j-setting-basic');
+        $form->addInput($JQQApp_secret);
 
         $JHide_cat = new Typecho_Widget_Helper_Form_Element_Text(
             'JHide_cat',
@@ -486,7 +507,7 @@ class OneTypecho_Plugin implements Typecho_Plugin_Interface
         }
 
         if (!array_key_exists('avatarUrl', $db->fetchRow($db->select()->from('table.users')))) {
-            $db->query('ALTER TABLE `'.$db->getPrefix().'users` ADD `avatarUrl` varchar(100) DEFAULT "" ;');
+            $db->query('ALTER TABLE `'.$db->getPrefix().'users` ADD `avatarUrl` varchar(300) DEFAULT "" ;');
         }
         if (!array_key_exists('ext_mail', $db->fetchRow($db->select()->from('table.users')))) {
             $db->query('ALTER TABLE `'.$db->getPrefix().'users` ADD `ext_mail` varchar(100) DEFAULT "" ;');

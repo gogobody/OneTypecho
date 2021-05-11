@@ -14,10 +14,11 @@ Component({
         }
     },
     ready() {
+        console.log("preload",this.data.preload)
         if (this.data.preload) {
             const poster = this.selectComponent('#poster');
             this.downloadStatus = 'doing';
-            console.log(this.data.config)
+            console.log("config",this.data.config)
             poster.downloadResource(this.data.config).then(() => {
                 this.downloadStatus = 'success';
                 this.trigger('downloadSuccess');

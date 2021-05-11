@@ -12,5 +12,5 @@ module.exports = {
     //你的域名
     JQ_DOMAIN: 'geekscholar.net',
     DEBUG_DOMAIN:'localhost',
-    JQ_DEBUG: false
+    JQ_DEBUG: true
 }

@@ -31,23 +31,24 @@ Page({
         comment_content: '',
         comment_count_change: 0,
         isLoadingDetail:true,
-        user_mail:''
+        user_mail:'',
+        post_id: 0,
+        comment_id: 0,
+
+        //小程序码
+        wxacode: '',
+
+        //返回页面是否需要刷新
+        needRefresh: true,
     },
 
-    post_id: 0,
-    comment_id: 0,
-
-    //小程序码
-    wxacode: '',
-
-    //返回页面是否需要刷新
-    needRefresh: true,
+    
 
     onLoad: function (options) {
         if (options.scene) {
-            this.post_id = decodeURIComponent(options.scene);
+            this.data.post_id = decodeURIComponent(options.scene);
         } else if (options.post_id) {
-            this.post_id = options.post_id;
+            this.data.post_id = options.post_id;
         }
         if(Auth.getUser().mail){
             this.setData({
@@ -59,16 +60,16 @@ Page({
     },
 
     onShow: function () {
-        // console.log(this.needRefresh)
+        console.log(this.data.needRefresh)
         this.setData({ isLoadingDetail: true });
-        if (!this.needRefresh) {
-            this.needRefresh = true;
+        if (!this.data.needRefresh) {
+            this.data.needRefresh = true;
             return;
         }
-        console.log(this.needRefresh)
+        console.log(this.data.needRefresh)
         let that = this;
         Rest.get(Api.JIANGQIE_POST_DETAIL, {
-            post_id: that.post_id
+            post_id: that.data.post_id
         }).then(res => {
             wx.setNavigationBarTitle({
                 title: res.data.title,
@@ -101,14 +102,14 @@ Page({
         return {
             title: this.data.post.title,
             imageUrl: this.data.post.thumbnail,
-            path: 'pages/article/article?post_id=' + this.post_id,
+            path: 'pages/article/article?post_id=' + this.data.post_id,
         }
     },
 
     onShareTimeline: function () {
         return {
             title: this.data.post.title,
-            query: 'post_id=' + this.post_id,
+            query: 'post_id=' + this.data.post_id,
             imageUrl: this.data.post.thumbnail,
         }
     },
@@ -177,7 +178,7 @@ Page({
                     height: 200,
                     x: 275,
                     y: 920,
-                    url: this.wxacode,
+                    url: this.data.wxacode,
                 }
             ]
 
@@ -194,7 +195,7 @@ Page({
      * 画报生成成功
      */
     onPosterSuccess(e) {
-        this.needRefresh = false;
+        this.data.needRefresh = false;
 
         const {
             detail
@@ -266,7 +267,7 @@ Page({
      * 评论 弹框
      */
     handlerCommentClick: function (e) {
-        this.comment_id = 0;
+        this.data.comment_id = 0;
         this.setData({
             show_comment_submit: true
         });
@@ -287,8 +288,8 @@ Page({
     handlerCommentSubmit: function (e) {
         let that = this;
         Rest.get(Api.JIANGQIE_COMMENT_ADD, {
-            post_id: that.post_id,
-            parent_id: that.comment_id,
+            post_id: that.data.post_id,
+            parent_id: that.data.comment_id,
             content: that.data.comment_content,
             user_mail: that.data.user_mail
         }).then(res => {
@@ -310,7 +311,7 @@ Page({
      * 评论 回复
      */
     handlerCommentReplyClick: function (e) {
-        this.comment_id = e.currentTarget.dataset.id;
+        this.data.comment_id = e.currentTarget.dataset.id;
         this.setData({
             show_comment_submit: true
         });
@@ -329,7 +330,7 @@ Page({
                 if (res.confirm) {
                     let comment_id = e.currentTarget.dataset.id;
                     Rest.get(Api.JIANGQIE_COMMENT_DELETE, {
-                        post_id: that.post_id,
+                        post_id: that.data.post_id,
                         comment_id: comment_id
                     }).then(res => {
                         that.setData({
@@ -371,9 +372,9 @@ Page({
     loadWxacode: function () {
         let that = this;
         Rest.get(Api.JIANGQIE_POST_WXACODE, {
-            post_id: that.post_id
+            post_id: that.data.post_id
         }).then(res => {
-            that.wxacode = res.data;
+            that.data.wxacode = res.data;
         }, err => {
             console.log(err);
         });
@@ -395,7 +396,7 @@ Page({
         }
 
         Rest.get(Api.JIANGQIE_COMMENT_INDEX, {
-            post_id: that.post_id,
+            post_id: that.data.post_id,
             offset: offset
         }).then(res => {
             let data = res.data.comments
