@@ -9,6 +9,9 @@ import App from './App';
 import Mixin from './polyfill/mixins';
 Vue.mixin(Mixin);
 
+import uView from "uview-ui";
+Vue.use(uView);
+
 Vue.config.productionTip = false;
 
 App.mpType = 'app';

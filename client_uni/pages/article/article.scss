@@ -1,0 +1,41 @@
+// page {
+// 	background-color: #F5F5F5;
+// }
+
+.info-box {
+	padding: 20rpx;
+	background-color: #FFFFFF;
+}
+
+.icon text {
+	font-size: 12px;
+	color: #999;
+	margin-right: 20rpx;
+}
+
+/*关注*/
+
+.user-item {
+	height: 80rpx;
+	margin: 20rpx 0 20rpx 0;
+}
+
+.user-item image {
+	width: 80rpx;
+	height: 80rpx;
+	float: left;
+	margin-right: 10rpx;
+	border-radius: 50%;
+}
+
+.user-item-user {
+	height: 80rpx;
+	float: left;
+	line-height: 1.9;
+}
+
+.cxplain {
+	font-size: 12px;
+	color: #999;
+	line-height: 100%;
+}

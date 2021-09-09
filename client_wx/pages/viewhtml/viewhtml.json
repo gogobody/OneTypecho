@@ -1,7 +1,0 @@
-{
-    "navigationBarTitleText": "...",
-    "usingComponents": {
-        "tui-loading": "../../components/loading/loading",
-        "wemark": "../../wemark/wemark"
-    }
-}

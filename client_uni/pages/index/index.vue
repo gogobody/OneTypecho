@@ -161,6 +161,33 @@
 					<!--加载loadding-->
 				</template>
 
+				<template v-else-if="currentTab==1">
+					<!-- 热门圈子 -->
+					<view class="block-title">
+						<text class="left">热门圈子</text>
+						<view url="/pages/categories/categories" @tap.stop="handlerTabMoreClick" class="right">
+							<text>查看更多</text>
+							<u-icon name="arrow-right"></u-icon>
+						</view>
+					</view>
+					<scroll-view :scroll-x="true">
+						<view class="topic-hot">
+							<navigator :url="'/pages/list/list?cat_id=' + item.mid + '&title='+ item.topic_name" class="topic-item"
+								v-for="(item,index) in topTopicList" :key="index">
+								<image mode="aspectFill" class="cover-img" :src="item.cover_image"></image>
+								<text>{{item.topic_name}}</text>
+							</navigator>
+						</view>
+					</scroll-view>
+					<!-- 热门精选 -->
+					<view class="block-title">
+						<text class="left">热门精选</text>
+						<view class="right">
+							<!-- <text>为你推荐更好的内容</text> -->
+						</view>
+					</view>
+					<post-list :list="circlePosts" :loadStatus="loadStatus"></post-list>
+				</template>
 				<template v-else>
 					<view class="container">
 						<view class="jiangqie-news-view">
@@ -238,8 +265,9 @@
 	import JiangqieLoading from "@/components/loading/loading";
 	import JiangqieLoadmore from "@/components/loadmore/loadmore";
 	import JiangqieNomore from "@/components/nomore/nomore";
-	import uniNavBar from '@/components/uni-nav-bar/uni-nav-bar.vue'
-
+	import uniNavBar from '@/components/uni-nav-bar/uni-nav-bar.vue';
+	import postList from '@/components/post-list/post-list.vue';
+	
 	export default {
 		data() {
 			return {
@@ -253,7 +281,14 @@
 				topNav: [{
 					id: 0,
 					name: '头条'
+				},{
+					id: 1,
+					name: '圈子'
 				}],
+				topTopicList: [],
+				circlePosts:[],
+				loadStatus: "loadmore",
+				
 				currentTab: 0,
 				//预设当前项的值
 
@@ -343,7 +378,11 @@
 					return;
 				}
 
-				this.loadPost(false);
+				if(this.currentTab ==1){
+					this.loadHotCirLists(false);
+				}else{
+					this.loadPost(false);
+				}
 			}
 		},
 
@@ -397,9 +436,12 @@
 					background: cur == 0 && this.slide && this.slide.length > 0 ? Api.JIANGQIE_BG_INDEX : '',
 					currentTab: cur
 				});
-
-				if (cur !== 0) {
+				if (cur !== 0 && cur!==1) {
 					this.loadPost(true);
+				}
+				if(cur ==1){
+					this.loadHotCirs();
+					this.loadHotCirLists();
 				}
 			},
 
@@ -472,7 +514,42 @@
 					});
 				});
 			},
-
+			loadHotCirs:function(){
+				let that = this;
+				that.setData({
+					loadding: true
+				});
+				Rest.get(Api.JIANGQIE_CIRCLE_HOT, {
+				}).then(res => {
+					that.setData({
+						loadding: false,
+						topTopicList: res.data,
+					});
+				});
+			},
+			loadHotCirLists:function(refresh=true){
+				let that = this;
+				that.setData({
+					loadding: true
+				});
+				let offset = 0;
+				
+				if (!refresh) {
+					offset = that.circlePosts.length;
+				}
+				Rest.get(Api.JIANGQIE_CIRCLE_HOT_LIST, {
+					'offset': offset,
+				}).then(res => {
+					let data=[]
+					if(res.data){
+						data = refresh ? res.data.data : that.circlePosts.concat(res.data.data)
+					}
+					that.setData({
+						loadding: false,
+						circlePosts: data,
+					});
+				});
+			},
 			openLink: function(link) {
 				if (link.startsWith('/pages')) {
 					uni.navigateTo({
@@ -494,6 +571,7 @@
 </script>
 
 <style lang="scss">
+	@import "index.scss";
 	.jiangqie-logo {
 		display: flex;
 		align-items: center;

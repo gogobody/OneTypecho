@@ -1,6 +1,21 @@
 <template>
 	<view>
 		<view class="container jiangqie-page-view">
+			<view class="info-box">
+				<view class="user-item">
+					<image :src="post.author.avatar"></image>
+					<view class="user-item-user">
+						<text class="user-name">{{post.author.username}}</text>
+						<view class="cxplain">{{post.author.intro}}</view>
+					</view>
+					<block v-if="post.author.is_follow">
+						<u-button size="mini" style="float:right;font-size: 14px;" @click="cancelFollow">已关注</u-button>
+					</block>
+					<block v-else>
+						<u-button type="error" size="mini" style="float:right;font-size: 14px;" @click="follow">关注</u-button>
+					</block>
+				</view>
+			</view>
 			<view class="jiangqie-page-head">
 				<view class="jiangqie-page-title">
 					<text>{{post.title}}</text>
@@ -196,7 +211,10 @@
 					time: "",
 					cats: [],
 					tags: [],
-					switch_comment: 0
+					switch_comment: 0,
+					author:{
+						avatar:""
+					}
 				},
 				post_like: 0,
 				post_favorite: 0,
@@ -308,6 +326,30 @@
 		// #endif
 
 		methods: {
+			follow(){
+				let that = this;
+				Rest.get(Api.JIANGQIE_CIRCLE_FOLLOWUSER, {
+					fid: that.post.author.uid
+				}).then(res => {
+					if(res.code==0){
+						uni.showToast({
+							title: '关注成功'
+						})
+					}
+				});
+			},
+			cancelFollow(){
+				let that = this
+				Rest.get(Api.JIANGQIE_CIRCLE_CANCELFUSER, {
+					fid: that.post.author.uid
+				}).then(res => {
+					if(res.code==0){
+						uni.showToast({
+							title: '取消成功'
+						})
+					}
+				});
+			},
 			//海报分享-百度
 			// #ifdef MP-BAIDU
 			clickPainter() {
@@ -679,10 +721,11 @@
 	};
 </script>
 <style>
+	@import "./article.scss";
 	button {
 		margin: 0;
 		padding: 0;
-		border-radius: 0;
+		/* border-radius: 0; */
 		background-color: transparent;
 	}
 
@@ -703,7 +746,7 @@
 	.jiangqie-page-title text {
 		display: block;
 		line-height: 46rpx;
-		padding: 50rpx 30rpx 0;
+		padding: 0rpx 30rpx 0;
 		color: #333;
 		font-size: 36rpx;
 		font-weight: 500;

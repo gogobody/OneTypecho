@@ -6,7 +6,17 @@ Hi，欢迎使用“酱茄小程序开源版 二开 typecho – 即刻学术小�
 >恳请各位使用的，二开的，留个本人的链接！更希望某些改点代码就说是自己的能收敛一点！！！
 >开源不易，且用且珍惜！如果您有好的想法欢迎 pr。更欢迎 star！！！
 
+
+
+typecho 配套插件地址移步：
+
+https://github.com/gogobody/OneTypecho_Plugin
+
+
+
 安装文档/常见问题：[https://www.ijkxs.com/3016.html/](https://www.ijkxs.com/3016.html/)
+
+
 
 更新于 2021/9/9
 
@@ -22,6 +32,14 @@ Hi，欢迎使用“酱茄小程序开源版 二开 typecho – 即刻学术小�
 
 
 后续更新：佛系~
+
+2021/9/9:
+
+pull latest  jiangqie，修改 rest api 关于 code -1  的处理，以及一些适配性bug
+
+
+
+index vue 添加 <template v-else-if="currentTab==1">
 
 
 

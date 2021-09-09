@@ -25,11 +25,15 @@
 		}
 	};
 </script>
-<style>
+<style lang="scss">
+	@import "uview-ui/index.scss";
+	@import "static/css/iconfont.css";
 	page {
 		background: #FFFFFF;
 	}
-
+	uni-view, uni-text{
+		box-sizing: initial;
+	}
 	button::after {
 		border-radius: 0;
 		border: none;

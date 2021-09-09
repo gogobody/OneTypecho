@@ -142,4 +142,9 @@ module.exports = {
 	 * 删除评论
 	 */
 	JIANGQIE_COMMENT_DELETE: makeURL('comment', 'delete'),
+	
+	JIANGQIE_CIRCLE_HOT: makeURL('circle', 'hot'),
+	JIANGQIE_CIRCLE_HOT_LIST: makeURL('circle', 'hot_list'),
+	JIANGQIE_CIRCLE_FOLLOWUSER: makeURL('circle', 'follow_user'),
+	JIANGQIE_CIRCLE_CANCELFUSER: makeURL('circle', 'cancelf_user'),
 };
