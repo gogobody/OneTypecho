@@ -20,13 +20,14 @@ document.addEventListener("DOMContentLoaded", function () {
     a.onreadystatechange = (() => {
         if (4 === a.readyState) if (a.status >= 200 && a.status < 300 || 304 === a.status) {
             let t = JSON.parse(a.responseText);
-            if (t.success) if (t.title !== n.innerHTML) {
-                // let s = '<h2 class="update">检测到版本更新！</h2><p>当前版本号：' + n.innerHTML + "</p><p>最新版本号：" + t.title + "</p>" + t.content;
-                // e.innerHTML = s
-            } else {
-                let s = '<h2 class="no-update">当前已是最新版本！</h2><p>当前版本号：' + n.innerHTML + "</p><p>最新版本号：" + t.title + "</p>" + t.content;
+            let newest = t.tag_name;
+            if (newest > n.innerHTML) {
+                let s = '<h2 class="update">检测到版本更新！</h2><p>当前版本号：' + n.innerHTML + "</p><p>最新版本号：" + newest + "</p><p><a href='https://ijkxs.com'>即刻学术</a></p>";
                 e.innerHTML = s
-            } else e.innerHTML = "请求失败！"
+            } else {
+                let s = '<h2 class="no-update">当前已是最新版本！</h2><p>当前版本号：' + n.innerHTML + "</p><p>最新版本号：" + newest + "</p><p><a href='https://ijkxs.com'>即刻学术</a></p>";
+                e.innerHTML = s
+            }
         } else e.innerHTML = "请求失败！"
-    }), a.open("get", "https://ae.js.cn/qqshoucang.php?key=1e16fda842c8435ffc87f1bdae983dc1", !0), a.send(null)
+    }), a.open("get", "https://api.github.com/repos/gogobody/OneTypecho_Plugin/releases/latest", !0), a.send(null)
 });

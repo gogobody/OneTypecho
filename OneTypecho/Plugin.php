@@ -2,19 +2,20 @@
     <link href="<?php echo Helper::options()->rootUrl ?>/usr/plugins/OneTypecho/assets/css/joe.setting.min.css" rel="stylesheet" type="text/css" />
     <div>
         <div class="j-aside">
-            <div class="logo">One 1.0.2</div>
+            <div class="logo">Typecho 小程序配套插件by gogobody</div>
             <ul class="j-setting-tab">
                 <li data-current="j-setting-notice">插件公告</li>
                 <li data-current="j-setting-basic">基础设置</li>
                 <li data-current="j-setting-index">首页设置</li>
                 <li data-current="j-setting-category">分类设置</li>
                 <li data-current="j-setting-hot">热门设置</li>
+                <li data-current="j-setting-login">登录设置</li>
                 <li data-current="j-setting-profile">我的设置</li>
             </ul>
             <?php require_once('Backups.php'); ?>
         </div>
     </div>
-    <span id="j-version" style="display: none;">1.0.2</span>
+    <span id="j-version" style="display: none;">1.0.3</span>
     <div class="j-setting-notice"></div>
     <script src="<?php echo Helper::options()->rootUrl ?>/usr/plugins/OneTypecho/assets/js/joe.setting.min.js"></script>
 <?php
@@ -48,6 +49,7 @@ class OneTypecho_Plugin implements Typecho_Plugin_Interface
         Helper::addRoute('get_hot',$setting.'/hot','OneTypecho_Action','get_hot');
         Helper::addRoute('get_category',$setting.'/category','OneTypecho_Action','get_category');
         Helper::addRoute('get_ucenter',$setting.'/ucenter','OneTypecho_Action','get_ucenter');
+        Helper::addRoute('get_login',$setting.'/login','OneTypecho_Action','get_login');
 
         $category = $base.'/category';
         //获取所有分类
@@ -89,6 +91,9 @@ class OneTypecho_Plugin implements Typecho_Plugin_Interface
         $user = $base.'/user';
         //用户登陆
         Helper::addRoute('user_login',$user.'/login','OneTypecho_Action','user_login');
+        Helper::addRoute('user_login3',$user.'/login3','OneTypecho_Action','user_login3');
+        Helper::addRoute('user_logintest',$user.'/logintest','OneTypecho_Action','user_logintest');
+
         //用户配置
         Helper::addRoute('user_index',$user.'/index','OneTypecho_Action','user_index');
         //用户点赞
@@ -111,6 +116,8 @@ class OneTypecho_Plugin implements Typecho_Plugin_Interface
         Helper::removeRoute('get_hot');
         Helper::removeRoute('get_category');
         Helper::removeRoute('get_ucenter');
+        Helper::removeRoute('get_login');
+
         Helper::removeRoute('get_index');
 
         Helper::removeRoute('comment_index');
@@ -129,6 +136,8 @@ class OneTypecho_Plugin implements Typecho_Plugin_Interface
         Helper::removeRoute('get_wxacode');
 
         Helper::removeRoute('user_login');
+        Helper::removeRoute('user_login3');
+        Helper::removeRoute('user_logintest');
         Helper::removeRoute('user_index');
         Helper::removeRoute('user_like');
         Helper::removeRoute('user_favorite');
@@ -167,45 +176,65 @@ class OneTypecho_Plugin implements Typecho_Plugin_Interface
         $Jlogo->setAttribute('class', 'j-setting-content j-setting-basic');
         $form->addInput($Jlogo);
 
-        $JAppid = new Typecho_Widget_Helper_Form_Element_Text(
-            'JAppid',
+        $app_id = new Typecho_Widget_Helper_Form_Element_Text(
+            'app_id',
             NULL,
             Null,
             'Appid',
             '微信小程序 Appid'
         );
-        $JAppid->setAttribute('class', 'j-setting-content j-setting-basic');
-        $form->addInput($JAppid);
+        $app_id->setAttribute('class', 'j-setting-content j-setting-basic');
+        $form->addInput($app_id);
 
-        $JApp_secret = new Typecho_Widget_Helper_Form_Element_Text(
-            'JApp_secret',
+        $app_secret = new Typecho_Widget_Helper_Form_Element_Text(
+            'app_secret',
             NULL,
             Null,
             'AppSecret',
             '微信小程序 AppSecret'
         );
-        $JApp_secret->setAttribute('class', 'j-setting-content j-setting-basic');
-        $form->addInput($JApp_secret);
+        $app_secret->setAttribute('class', 'j-setting-content j-setting-basic');
+        $form->addInput($app_secret);
 
-        $JQQAppid = new Typecho_Widget_Helper_Form_Element_Text(
-            'JQQAppid',
+        $qq_app_id = new Typecho_Widget_Helper_Form_Element_Text(
+            'qq_app_id',
             NULL,
             Null,
             'QQAppid',
             'QQ小程序 Appid'
         );
-        $JQQAppid->setAttribute('class', 'j-setting-content j-setting-basic');
-        $form->addInput($JQQAppid);
+        $qq_app_id->setAttribute('class', 'j-setting-content j-setting-basic');
+        $form->addInput($qq_app_id);
 
-        $JQQApp_secret = new Typecho_Widget_Helper_Form_Element_Text(
-            'JQQApp_secret',
+        $qq_app_secret = new Typecho_Widget_Helper_Form_Element_Text(
+            'qq_app_secret',
             NULL,
             Null,
-            'JQQApp_secret',
+            'qq_app_secret',
             'QQ小程序 App_secret'
         );
-        $JQQApp_secret->setAttribute('class', 'j-setting-content j-setting-basic');
-        $form->addInput($JQQApp_secret);
+        $qq_app_secret->setAttribute('class', 'j-setting-content j-setting-basic');
+        $form->addInput($qq_app_secret);
+
+        $bd_app_key = new Typecho_Widget_Helper_Form_Element_Text(
+            'bd_app_key',
+            NULL,
+            Null,
+            'bd_app_key',
+            '百度小程序 bd_app_key'
+        );
+        $bd_app_key->setAttribute('class', 'j-setting-content j-setting-basic');
+        $form->addInput($bd_app_key);
+
+        $bd_app_secret = new Typecho_Widget_Helper_Form_Element_Text(
+            'bd_app_secret',
+            NULL,
+            Null,
+            'bd_app_secret',
+            '百度小程序 bd_app_secret'
+        );
+        $bd_app_secret->setAttribute('class', 'j-setting-content j-setting-basic');
+        $form->addInput($bd_app_secret);
 
         $JHide_cat = new Typecho_Widget_Helper_Form_Element_Text(
             'JHide_cat',
@@ -436,7 +465,18 @@ class OneTypecho_Plugin implements Typecho_Plugin_Interface
         );
         $JHot_description->setAttribute('class', 'j-setting-content j-setting-hot');
         $form->addInput($JHot_description);
-
+        /**
+         * login
+         */
+        $JLogin_bg = new Typecho_Widget_Helper_Form_Element_Text(
+            'JLogin_bg',
+            NULL,
+            "https://xcx.jiangqie.com/wp-content/uploads/2020/02/21212.png",
+            '登录背景图',
+            '登录背景图'
+        );
+        $JLogin_bg->setAttribute('class', 'j-setting-content j-setting-login');
+        $form->addInput($JLogin_bg);
         /**
          * profile
          */

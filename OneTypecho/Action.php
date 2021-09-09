@@ -1,5 +1,6 @@
 <?php
 header('Access-Control-Allow-Origin: *');
+error_reporting(E_ALL ^ E_WARNING);
 require_once 'Utils.php';
 define('UPLOAD_DIR' , '/usr/uploads');
 
@@ -11,6 +12,11 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
     //分页 每页数量
     const POSTS_PER_PAGE = 10;
     /**
+     * @var string
+     */
+    private $plugin_dir;
+
+    /**
      * @var mixed|null
      */
     public function __construct($request, $response, $params = NULL)
@@ -18,7 +24,7 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
         parent::__construct($request, $response, $params);
         $this->db = Typecho_Db::get();
         $this->res = new Typecho_Response();
-
+        $this->plugin_dir = Helper::options()->pluginDir('OneTypecho').'/OneTypecho';
 //        var_dump($this->request->getRequestUrl());
         if (method_exists($this, $this->request->type)) {
             call_user_func(array(
@@ -114,8 +120,8 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
      * @return array
      */
     public function get_categories($args){
-        $cat_ids = $args['include'];
-        $exclude = $args['exclude'];
+        $cat_ids = !empty($args['include'])?$args['include']:null;
+        $exclude = !empty($args['exclude'])?$args['exclude']:null;
         if (isset($cat_ids) && !empty($cat_ids[0])){
             $select = $this->db->select()->from('table.metas')->where('type = ?','category')->where('mid IN ?',$cat_ids);
         }elseif (isset($exclude) and !empty($exclude[0])){
@@ -192,7 +198,7 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
         }
     }
 
-    private function get_user_meta($user_id,$key,$single){
+    private function get_user_meta($user_id,$key){
         return $this->db->fetchRow($this->db->select($key)->from('table.users')->where('uid = ?',$user_id))[$key];
     }
 
@@ -303,7 +309,7 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
             $select = $select->limit($args['posts_per_page']);
         }
         if (isset($args['orderby']) and !empty($args['orderby'][0])){
-            if ($args['order'] == 'DESC'){
+            if (array_key_exists('order',$args) && $args['order'] == 'DESC'){
                 $select = $select->order($args['orderby'],Typecho_Db::SORT_DESC);
             }else{
                 $select = $select->order($args['orderby']);
@@ -630,7 +636,16 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
         return $this->make_success($data);
     }
 
-
+    /**
+     * 获取登录配置
+     */
+    public function get_login()
+    {
+        $background = self::option_value('JLogin_bg');
+        return $this->make_success([
+            'background' => $background
+        ]);
+    }
     /**
      * 获取所有分类
      * @throws Typecho_Plugin_Exception
@@ -787,22 +802,22 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
             return $this->make_error('缺少参数');
         }
 
-//        $this->widget('Widget_Archive@'.$post_id, 'pageSize=1&type=post', 'cid='.$post_id)->to($postObj);
-        $postObj = $this->db->fetchObject($this->db->select()->from('table.contents')->where('cid = ?',$post_id));
+        $this->widget('Widget_Archive@tmp_'.$post_id, 'pageSize=1&type=post', 'cid='.$post_id)->to($postObj);
+//        $postObj = $this->db->fetchObject($this->db->select()->from('table.contents')->where('cid = ?',$post_id));
         $post = [
             'id' => $postObj->cid,
             'time' => $postObj->created,
             'title' => $postObj->title,
-            'content' => preg_replace("/<!--markdown-->/sm", '', $postObj->text),
+            'content' => $postObj->content, //preg_replace("/<!--markdown-->/sm", '', $postObj->text),
             'comment_count' => $postObj->commentsNum,
-            'thumbnail' => self::GetRandomThumbnail($postObj->content)
+            'thumbnail' => self::GetRandomThumbnail($postObj->text)
         ];
+        $post['excerpt'] = html_entity_decode(self::tp_trim_words($postObj->text, 100, '...'));
 
-        if ($postObj->excerpt) {
-            $post['excerpt'] = html_entity_decode(self::tp_trim_words($postObj->post_excerpt, 100, '...'));
-        } else {
-            $post['excerpt'] = html_entity_decode(self::tp_trim_words($post['text'], 100, '...'));
-        }
+//        if ($postObj->excerpt) {
+//            $post['excerpt'] = html_entity_decode(self::tp_trim_words($postObj->excerpt, 100, '...'));
+//        } else {
+//        }
 
         //查询tag
         $tags = self::get_the_tags($post_id);
@@ -840,7 +855,8 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
         $post['like_list'] = [];
         if (!empty($users)) {
             foreach ($users as $user) {
-                $post['like_list'][] = Utils::ParseAvatar($user['user_mail']);
+                $mail = empty($user['user_mail'])?'':$user['user_mail'];
+                $post['like_list'][] = Utils::ParseAvatar($mail);
             }
         }
 
@@ -890,10 +906,10 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
         }
 
 //        $table_post = $this->db->getPrefix() . 'posts';
-//        $this->widget('Widget_Archive@'.$page_id, 'pageSize=1&type=post', 'cid='.$page_id)->to($post);
-        $post = $this->db->fetchObject($this->db->select()->from('table.contents')->where('cid = ?',$page_id));
+        $this->widget('Widget_Archive@tmpage_'.$page_id, 'pageSize=1&type=page', 'cid='.$page_id)->to($post);
+//        $post = $this->db->fetchObject($this->db->select()->from('table.contents')->where('cid = ?',$page_id));
         $page['title'] = $post->title;
-        $page['content'] = $post->text;
+        $page['content'] = $post->content;
 
         return $this->make_success($page);
     }
@@ -1082,7 +1098,7 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
         }elseif ($plantform == 'mp-qq'){
             $data = array(
                 'scene' => $post_id, //TODO 自定义信息，可以填写诸如识别用户身份的字段，注意用中文时的情况
-                'appid' => self::option_value('JQQAppid'),
+                'appid' => self::option_value('qq_app_id'),
                 'page' => $page, // 前端传过来的页面path,不能为空，最大长度 128 字节
                 'path' => $page,
                 'width' => 200, // 设置二维码尺寸,二维码的宽度
@@ -1135,12 +1151,12 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
         }
         if ($plantform == "mp-weixin"){
             $baseurl = 'https://api.weixin.qq.com/sns/jscode2session?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code';
-            $app_id = self::option_value('JAppid');
-            $app_secret = self::option_value('JApp_secret');
+            $app_id = self::option_value('app_id');
+            $app_secret = self::option_value('app_secret');
         }elseif($plantform == "mp-qq"){
             $baseurl = 'https://api.q.qq.com/sns/jscode2session?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code';
-            $app_id = self::option_value('JQQAppid');
-            $app_secret = self::option_value('JQQApp_secret');
+            $app_id = self::option_value('qq_app_id');
+            $app_secret = self::option_value('qq_app_secret');
         }else{
             return $this->make_error('平台不支持');
         }
@@ -1162,7 +1178,7 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
 
         $auth_code = $this->decryptData($app_id, $session['session_key'], urldecode($encrypted_data), urldecode($iv), $data);
         if ($auth_code != 0) {
-            return $this->make_error('授权失败',$auth_code);
+            return $this->make_error('授权失败'.$session['errcode'].$session['errmsg'],$auth_code);
         }
 
         $user_data = json_decode($data, true);
@@ -1208,12 +1224,221 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
             "nickname" => $user_data["nickName"],
             "avatar" => $user_data["avatarUrl"],
             "token" => $one_token,
-            "ext_mail" => $user_data["ext_mail"]
+            "ext_mail" => !empty($user_data["ext_mail"])?$user_data["ext_mail"]:''
         );
 
         return $this->make_success($user);
     }
 
+    /**
+     * 微信用户登录
+     * @throws Typecho_Plugin_Exception
+     * @throws Typecho_Db_Exception
+     */
+    public function user_login3()
+    {
+        $code = $this->request->get('code', '');
+        $nickname = $this->request->get('nickname', '');
+        $avatar = $this->request->get('avatar', '');
+        $channel = $this->request->get('channel','');
+
+        if (empty($code) || empty($nickname) || empty($avatar) || empty($channel)) {
+            return $this->make_error('缺少参数');
+        }
+        $session = false;
+        if ('weixin' == $channel) {
+            $session = $this->wx_code2openid($code);
+        } else if ('qq' == $channel) {
+            $session = $this->qq_code2openid($code);
+        } else if ('baidu' == $channel) {
+            $session = $this->bd_code2openid($code);
+        }
+        if (!$session) {
+            return $this->make_error('授权失败');
+        }
+
+        $open_id = $session['openid'];
+
+        if (!$this->username_exists($open_id)) {
+            $user_id = $this->db->query($this->db->insert('table.users')->rows([
+                'name' => $open_id,
+                'screenName' => $nickname,
+                'ext_mail' => $open_id . '@ijkxs.com',
+                'group' => 'subscriber',
+                'password' => self::random_code(16),
+            ]));
+
+
+        } else {
+            $user = $this->get_user_by('login', $open_id);
+            $user_id = $this->tp_update_user($user->uid,[
+                'screenName' => $nickname,
+            ]);
+
+        }
+        $one_token = $this->generate_token();
+        //如果每次都同步微信头像 会导致小程序设置的头像失效；所以没有头像时，才同步头像
+        $userUrl = $this->get_user_meta($user_id,'avatarUrl');
+        if(empty($userUrl)){
+            $this->tp_update_user($user_id,[
+                'avatarUrl' => $avatar,
+                'one_token' => $one_token
+            ]);
+        }else{
+            $this->tp_update_user($user_id,[
+                'one_token' => $one_token
+            ]);
+            $avatar = $userUrl;
+        }
+
+        $user = array(
+            "nickname" => $nickname,
+            "avatar" => $avatar,
+            "token" => $one_token,
+            "ext_mail" => !empty($user_data["ext_mail"])?$user_data["ext_mail"]:''
+        );
+
+        return $this->make_success($user);
+    }
+
+    /**
+     * typecho 登录接口
+     * @return array
+     * @throws Typecho_Exception
+     */
+    public function user_logintest()
+    {
+        $account = $this->request->get('account', '');
+        $password = $this->request->get('password', '');
+        $user = Typecho_Widget::widget('Widget_User');
+        if (!$user->login($account, $password, true)) { //使用特定的账号登陆
+            return $this->make_error('登录失败');
+        }
+        $one_token = $this->generate_token();
+        $this->tp_update_user($user->uid,[
+            'one_token' => $one_token
+        ]);
+        $userdata = array(
+            "nickname" => $user->screenName,
+            "avatar" => !empty($user->avatarUrl)?$user->avatarUrl:$user->userAvatar,
+            "token" => $one_token,
+            "ext_mail" => !empty($user->ext_mail)?$user->ext_mail:$user->mail
+        );
+
+        return $this->make_success($userdata);
+    }
+
+    public function geturl($url, $data){
+        $query = '';
+        if(!empty($data)){
+            $query = '?'.http_build_query($data);
+        }
+        $headerArray =array("Content-type:application/json;","Accept:application/json");
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url.$query);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, FALSE);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch,CURLOPT_HTTPHEADER,$headerArray);
+        $output = curl_exec($ch);
+        curl_close($ch);
+        $output = json_decode($output,true);
+        return $output;
+    }
+
+
+    public function posturl($url,$data){
+        $data  = json_encode($data);
+        $headerArray =array("Content-type:application/json;charset='utf-8'","Accept:application/json");
+        $curl = curl_init();
+        curl_setopt($curl, CURLOPT_URL, $url);
+        curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, FALSE);
+        curl_setopt($curl, CURLOPT_SSL_VERIFYHOST,FALSE);
+        curl_setopt($curl, CURLOPT_POST, 1);
+        curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
+        curl_setopt($curl,CURLOPT_HTTPHEADER,$headerArray);
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+        $output = curl_exec($curl);
+        curl_close($curl);
+        return json_decode($output,true);
+    }
+
+    private function wx_code2openid($code)
+    {
+        $app_id = self::option_value('app_id');
+        $app_secret = self::option_value('app_secret');
+        if (!$app_id || !$app_secret) {
+            return false;
+        }
+
+        $params = [
+            'appid' => $app_id,
+            'secret' => $app_secret,
+            'js_code' => $code,
+            'grant_type' => 'authorization_code'
+        ];
+
+        $result = $this->geturl( 'https://api.weixin.qq.com/sns/jscode2session',$params);
+
+        if (!is_array($result)) {
+            return false;
+        }
+
+        file_put_contents('wx_login', json_encode($result));
+
+
+        return $result;
+    }
+
+    private function qq_code2openid($code)
+    {
+        $app_id = self::option_value('qq_app_id');
+        $app_secret = self::option_value('qq_app_secret');
+        if (!$app_id || !$app_secret) {
+            return false;
+        }
+
+        $params = [
+            'appid' => $app_id,
+            'secret' => $app_secret,
+            'js_code' => $code,
+            'grant_type' => 'authorization_code'
+        ];
+
+        $result = $this->geturl('https://api.q.qq.com/sns/jscode2session',$params);
+        if (!is_array($result)) {
+            return false;
+        }
+
+        file_put_contents('qq_login', json_encode($result));
+
+
+        return $result;
+    }
+
+    private function bd_code2openid($code)
+    {
+        $app_id = self::option_value('bd_app_key');
+        $app_secret = self::option_value('bd_app_secret');
+        if (!$app_id || !$app_secret) {
+            return false;
+        }
+
+        $params = [
+            'client_id' => $app_id,
+            'sk' => $app_secret,
+            'code' => $code,
+        ];
+
+        $result = $this->geturl('https://spapi.baidu.com/oauth/jscode2sessionkey',$params);
+        if (!is_array($result)) {
+            return false;
+        }
+
+        file_put_contents('bd_login', json_encode($result));
+
+        return $result;
+    }
 
     /**
      * 用户 数据
@@ -1337,8 +1562,8 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
             $user = $this->db->fetchRow($this->db->select('uid','ext_mail')->from('table.users')->where('one_token = ?',$token));
             if (empty($user['uid'])){
                 return $this->make_success([
-                    "comments" => [],
-                    "user_mail" => ''
+//                    "comments" => [],
+//                    "user_mail" => ''
                 ]);
             }
         }else{
@@ -1350,11 +1575,11 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
         foreach ($comments as &$comment) {
             $comment['replys'] = $this->get_comments($post_id, $user['uid'], $comment['id']);
         }
-
-        return $this->make_success([
-            "comments" => $comments,
-            "user_mail" => $user['ext_mail']
-        ]);
+        return $this->make_success($comments);
+//        return $this->make_success([
+//            "comments" => $comments,
+//            "user_mail" => empty($user['ext_mail'])?'':$user['ext_mail']
+//        ]);
     }
 
     /**
@@ -1367,9 +1592,9 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
         $c_mail = $this->request->get('user_mail', '');
 
         if (empty($token)) {
-            return false;
+            return $this->make_error('未登录', -1);
         }
-        if ($token == 'false') return '';
+        if ($token == 'false') return $this->make_error('未登录', -1);
         $user = $this->db->fetchRow($this->db->select()->from('table.users')->where('one_token = ?',$token));
         $user_id = $user['uid'];
         if (!$user_id) {
@@ -1407,20 +1632,23 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
                 'ext_mail' => $c_mail
             ]);
         }
-
+        $post = $this->db->fetchObject($this->db->select('authorId')->from('table.contents')->where('cid = ?',$post_id));
+        if(empty((array)$post_id)){
+            return $this->make_error("文章不存在");
+        }
         $comment_id = $this->db->query($this->db->insert('table.comments')->rows([
             'cid' => $post_id,
             'text' => $content,
             'created' => time(),
             'parent' => $parent_id,
             'status' => $comment_approved,
-            'ownerId' => '1',
+            'ownerId' => $user['uid'],
             'type' => 'comment',
             'author' => $user['screenName'],
-            'authorId' => $user['uid'],
+            'authorId' => $post->authorId,
             'agent' => 'miniprogram',
             'ip' => '8.8.8.8',
-            'url' => 'https://geekscholar.net',
+            'url' => $user['url'],
             'mail' => $c_mail
 
         ]));
@@ -1597,8 +1825,16 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
      */
     private function getWXSession()
     {
-        $app_id = self::option_value('JAppid');
-        $app_secret = self::option_value('JApp_secret');
+        $path_token = $this->plugin_dir . '/token_data/wx_access_token.data';
+        if (file_exists($path_token)) {
+            $str_token = file_get_contents($path_token);
+            $access_token = json_decode($str_token, TRUE);
+            if ($access_token['expires_in'] > time()) {
+                return $access_token;
+            }
+        }
+        $app_id = self::option_value('app_id');
+        $app_secret = self::option_value('app_secret');
         $url = 'https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=' . $app_id . '&secret=' . $app_secret;
         $info = file_get_contents($url);
         $json = json_decode($info);
@@ -1606,13 +1842,23 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
         if (!$arr['access_token']){
             return false;
         }
+        $arr['expires_in'] = $arr['expires_in'] + time() - 200;
+        file_put_contents($path_token, json_encode($arr));
         return $arr; // access_token
     }
 
     private function getQQSession()
     {
-        $app_id = self::option_value('JQQAppid');
-        $app_secret = self::option_value('JQQApp_secret');
+        $path_token = $this->plugin_dir . '/token_data/qq_access_token.data';
+        if (file_exists($path_token)) {
+            $str_token = file_get_contents($path_token);
+            $access_token = json_decode($str_token, TRUE);
+            if ($access_token['expires_in'] > time()) {
+                return $access_token;
+            }
+        }
+        $app_id = self::option_value('qq_app_id');
+        $app_secret = self::option_value('qq_app_secret');
         $url = 'https://api.q.qq.com/api/getToken?grant_type=client_credential&appid=' . $app_id . '&secret=' . $app_secret;
         $info = file_get_contents($url);
         $json = json_decode($info);
@@ -1620,6 +1866,8 @@ class OneTypecho_Action extends Typecho_Widget implements Widget_Interface_Do
         if (!$arr['access_token']){
             return false;
         }
+        $arr['expires_in'] = $arr['expires_in'] + time() - 200;
+        file_put_contents($path_token, json_encode($arr));
         return $arr; // access_token
     }
 
